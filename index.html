@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Quiz Portal</title>
+  <style>
+    body {
+      background-color: #0d0d0d;
+      color: #f1f1f1;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      color: #00f0ff;
+      text-shadow: 0 0 10px #00f0ff;
+      text-align: center;
+    }
+
+    /* Form Styles */
+    form {
+      background: #1a1a1a;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #00f0ff33;
+      max-width: 400px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 40px;
+    }
+
+    input {
+      background-color: #000;
+      border: 1px solid #00f0ff;
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      box-shadow: 0 0 5px #00f0ff;
+      transition: 0.2s;
+    }
+
+    input:focus {
+      box-shadow: 0 0 12px #00f0ff;
+      border-color: #00f0ff;
+    }
+
+    button {
+      background: #00f0ff;
+      color: #000;
+      font-size: 18px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 0 10px #00f0ff;
+      transition: 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background: #00d6e0;
+      transform: scale(1.05);
+    }
+
+    .success-message, .error-message {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success-message {
+      color: #00ff88;
+      text-shadow: 0 0 10px #00ff88;
+    }
+
+    .error-message {
+      color: #ff4b4b;
+      text-shadow: 0 0 10px #ff4b4b;
+    }
+
+    /* Quiz Card Styles */
+    #quizList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .quiz-card {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 12px;
+      color: #00f0ff;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 0 10px #00f0ff33;
+      transition: 0.2s;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .quiz-card:hover {
+      box-shadow: 0 0 15px #00f0ff;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Student Quiz Portal</h1>
+
+  <!-- Student Submission Form -->
+  <form id="quizForm">
+    <input type="text" name="name" placeholder="Enter Name" required>
+    <input type="text" name="class" placeholder="Class" required>
+    <input type="text" name="roll" placeholder="Roll" required>
+    <input type="number" name="score" placeholder="Score" required>
+    <button type="submit">Submit Score</button>
+    <div class="success-message" id="successMsg" style="display:none;">✅ Score Submitted!</div>
+    <div class="error-message" id="errorMsg" style="display:none;">❌ Error submitting. Try again.</div>
+  </form>
+
+  <!-- Quiz Cards -->
+  <h2>Available Quizzes</h2>
+  <div id="quizList"></div>
+
+  <script>
+    /* Student Form Submission */
+    const form = document.getElementById("quizForm");
+    const successMsg = document.getElementById("successMsg");
+    const errorMsg = document.getElementById("errorMsg");
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      successMsg.style.display = "none";
+      errorMsg.style.display = "none";
+
+      const formData = {
+        name: this.name.value,
+        class: this.class.value,
+        roll: this.roll.value,
+        score: this.score.value
+      };
+
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzF5w018MYfdkdPguiLMKNmxGPPxF1E0EzDJT8W8fIMNMYCvNrKYo24k0x7g8gfiJrS/exec", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+          successMsg.style.display = "block";
+          form.reset();
+        } else {
+          errorMsg.innerText = "❌ " + result.message;
+          errorMsg.style.display = "block";
+        }
+
+      } catch (err) {
+        errorMsg.innerText = "❌ Error submitting. Check your connection.";
+        errorMsg.style.display = "block";
+      }
+    });
+
+    /* Dynamic Quiz Cards */
+    const quizzes = [
+      { name: "Unit 2, Lesson 1, The Greed of the roaring rivers", file: "unit_2_lesson_1_the_greed_of_the_roaring_rivers.html" },
+      { name: "Unit 2, Lesson 3, Man and Climate", file: "unit_2_lesson3_man_and_climate.html" },
+      { name: "Unit 2, Lesson 4, The Wheel Of Cyclone", file: "unit_2_lesson_4_the_wheel_of_cyclone.html" }
+      // Add more quizzes here
+    ];
+
+    const quizContainer = document.getElementById("quizList");
+
+    quizzes.forEach(q => {
+      const card = document.createElement("a");
+      card.href = q.file;
+      card.target = "_blank";
+      card.className = "quiz-card";
+      card.innerText = q.name;
+      quizContainer.appendChild(card);
+    });
+  </script>
+
+</body>
+</html>

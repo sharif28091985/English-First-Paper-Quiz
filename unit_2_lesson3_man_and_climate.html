@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mother Teresa — Interactive Quiz</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --card:#111827ee; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22c55e; /* green-500 */
+      --accent-2:#6366f1; /* indigo-500 */
+      --warn:#ef4444; /* red-500 */
+      --ok:#10b981; /* emerald-500 */
+      --chip:#1f2937; /* gray-800 */
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 600px at 10% 0%,#0b1220 0%,#0b1220 30%,#0f172a 70%),var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);}
+    .wrap{max-width:980px;margin:32px auto;padding:16px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:clamp(20px,3vw,28px);margin:0}
+    .subtitle{color:var(--muted);font-size:14px}
+    .card{background:linear-gradient(180deg,#0b1220, #0b1220dd 70%, #0b1220),var(--card);border:1px solid #1f2937;border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .pill{background:var(--chip);color:#cbd5e1;border:1px solid #2a3345;padding:6px 10px;border-radius:999px;font-size:12px}
+    .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button{all:unset;background:#1f2937; padding:10px 14px;border-radius:12px;cursor:pointer;border:1px solid #2a3345}
+    button:hover{transform:translateY(-1px)}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:0;color:white}
+    button.ghost{background:transparent}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+    .q-text{font-size:18px;line-height:1.5;margin-bottom:10px}
+    .options{display:grid;gap:10px}
+    .opt{background:#0f172a;border:1px solid #263246;padding:12px;border-radius:14px;cursor:pointer}
+    .opt:hover{border-color:#3b4966}
+    .opt.selected{outline:2px solid #475569}
+    .opt.correct{border-color:var(--ok);background:#052e22}
+    .opt.wrong{border-color:var(--warn);background:#2a0d11}
+    .progress{height:10px;background:#1f2937;border-radius:999px;overflow:hidden}
+    .bar{height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));width:0%}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;color:#cbd5e1;font-size:13px;margin:10px 0}
+    .feedback{margin-top:10px;padding:10px;border-radius:12px;background:#0b1220;border:1px solid #263246;display:none}
+    .feedback.show{display:block}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#0b1220;border:1px solid #2a3345;border-radius:6px;padding:2px 6px;font-size:12px;color:#cbd5e1}
+    .footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .toggle{display:inline-flex;gap:8px;align-items:center}
+    input[type="checkbox"]{accent-color:#22c55e;}
+    .review{margin-top:18px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #243046;padding:10px;text-align:left}
+    .muted{color:var(--muted)}
+    .badge{padding:6px 8px;border-radius:8px;background:#0b1220;border:1px solid #263246;font-size:12px}
+    .success{color:#10b981}
+    .error{color:#ef4444}
+    .center{display:flex;justify-content:center;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Unit 2, Lesson 3: Man and Climate</h1>
+        <div class="subtitle">By Sharif Uddin.</div>
+      </div>
+      <div class="row">
+        <span class="pill" id="mode-pill">Mode: Mixed</span>
+        <span class="pill" id="score-pill">Score: 0</span>
+        <span class="pill" id="q-pill">Q 0 / 0</span>
+      </div>
+    </header>
+
+    <div class="card" id="quiz-card">
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="meta">
+        <span class="badge" id="type-badge">MCQ</span>
+        <span class="badge">Auto-advance: <span id="auto-state">On</span></span>
+        <span class="badge" id="timer">Time: 0s</span>
+      </div>
+      <div id="q-container">
+        <!-- question will render here -->
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="footer">
+        <div class="controls">
+          <button class="ghost" id="btn-prev">⟵ Prev</button>
+          <button id="btn-submit" class="primary">Submit</button>
+          <button id="btn-next">Next ⟶</button>
+          <button class="ghost" id="btn-skip">Skip</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="autoToggle" checked /> Auto next</label>
+      </div>
+    </div>
+
+    <div class="card review" id="result-card" style="display:none">
+      <h2>Result</h2>
+      <p class="muted" id="summary"></p>
+      <div id="breakdown" class="row"></div>
+      <h3>Review Answers</h3>
+      <table id="review-table">
+        <thead>
+          <tr><th>#</th><th>Type</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-restart">Restart Quiz</button>
+        <button id="btn-print">Print / Save PDF</button>
+      </div>
+    </div>
+
+    <details class="card" style="margin-top:16px">
+      <summary>🧰 Teacher Panel (edit questions live)</summary>
+      <p class="muted">You can copy/download this file and edit the <code>QUESTIONS</code> array below to customize. Changes here only apply while the page is open.</p>
+      <textarea id="editor" style="width:100%;height:220px;background:#0b1220;color:#e5e7eb;border:1px solid #263246;border-radius:12px;padding:10px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-apply">Apply JSON</button>
+        <span class="muted">Tip: Press <span class="kbd">Ctrl/⌘ + S</span> to download this page.</span>
+      </div>
+    </details>
+
+  </div>
+
+  <script>
+  /* --------------------- Data: Questions from the passage --------------------- */
+  const QUESTIONS = [
+    // MCQ
+{id:1, type:'mcq', points:1, q:'What can humans not change? (মানুষ কী পরিবর্তন করতে পারে না?)', opts:['The greenhouse gases (গ্রীনহাউস গ্যাস)','The sun\'s radiation and earth\'s orbit (সূর্যের বিকিরণ এবং পৃথিবীর কক্ষপথ)','Carbon dioxide (কার্বন ডাই অক্সাইড)','Natural gas use (প্রাকৃতিক গ্যাসের ব্যবহার)'], ans:1, exp:'Humans cannot change the sun\'s radiation or the Earth\'s orbit.'},
+
+{id:2, type:'mcq', points:1, q:'What can humans control? (মানুষ কী নিয়ন্ত্রণ করতে পারে?)', opts:['Earthquakes (ভূমিকম্প)','Rainfall (বৃষ্টিপাত)','Increase of greenhouse gases (গ্রীনহাউস গ্যাস বৃদ্ধির হার)','Sunlight (রোদ)'], ans:2, exp:'Humans can control the increase of greenhouse gases.'},
+
+{id:3, type:'mcq', points:1, q:'Who is responsible for the alarming rise in carbon dioxide? (কার্বন ডাই অক্সাইড বৃদ্ধির জন্য কে দায়ী?)', opts:['Animals (প্রাণী)','Volcanoes (আগ্নেয়গিরি)','Humans (মানুষ)','Oceans (মহাসাগর)'], ans:2, exp:'Humans are responsible for the alarming rise in carbon dioxide.'},
+
+{id:4, type:'mcq', points:1, q:'When did the increase of carbon dioxide start? (কার্বন ডাই অক্সাইড বৃদ্ধি কবে শুরু হয়?)', opts:['Last 10 years (গত ১০ বছরে)','During the last hundred years (গত ১০০ বছরে)','Since ancient times (প্রাচীনকাল থেকে)','Since 21st century (২১ শতক থেকে)'], ans:1, exp:'The increase started during the last hundred years.'},
+
+{id:5, type:'mcq', points:1, q:'What is the main cause of increased CO₂ in the atmosphere? (বায়ুমণ্ডলে CO₂ বৃদ্ধির প্রধান কারণ কী?)', opts:['Tree plantation (বৃক্ষরোপণ)','Rainfall (বৃষ্টিপাত)','Burning fossil fuels (জীবাশ্ম জ্বালানি পোড়ানো)','Solar panels (সোলার প্যানেল)'], ans:2, exp:'Burning fossil fuels is the main cause of increased CO₂.'},
+
+{id:6, type:'mcq', points:1, q:'What began to increase rapidly at the end of the 19th century? (১৯ শতকের শেষ দিকে কী দ্রুত বেড়েছে?)', opts:['Pollution (দূষণ)','Industrial activities (শিল্প কার্যক্রম)','Tree plantation (বৃক্ষরোপণ)','Agricultural lands (কৃষিজমি)'], ans:1, exp:'Industrial activities began to increase rapidly.'},
+
+{id:7, type:'mcq', points:1, q:'What did factories need to run? (কারখানাগুলো চালাতে কী লাগত?)', opts:['Solar energy (সৌর শক্তি)','Wind energy (বায়ু শক্তি)','Energy from coal (কয়লা থেকে শক্তি)','Water (পানি)'], ans:2, exp:'Factories needed energy from coal to run.'},
+
+{id:8, type:'mcq', points:1, q:'Which was not mentioned as an energy source in the text? (নিচের কোনটি টেক্সটে শক্তির উৎস হিসেবে বলা হয়নি?)', opts:['Coal (কয়লা)','Mineral oil (খনিজ তেল)','Natural gas (প্রাকৃতিক গ্যাস)','Solar power (সৌর শক্তি)'], ans:3, exp:'Solar power was not mentioned as an energy source.'},
+
+{id:9, type:'mcq', points:1, q:'What is burned to heat houses and run vehicles? (ঘর গরম করতে ও যানবাহন চালাতে কী পোড়ানো হয়?)', opts:['Wood (কাঠ)','Fossil fuels (জীবাশ্ম জ্বালানি)','Electricity (বিদ্যুৎ)','Plastic (প্লাস্টিক)'], ans:1, exp:'Fossil fuels are burned to heat houses and run vehicles.'},
+
+{id:10, type:'mcq', points:1, q:'Approximately how many barrels of crude oil are burned daily? (প্রতিদিন কত ব্যারেল অপরিশোধিত তেল পোড়ানো হয় প্রায়?)', opts:['50 million (৫০ মিলিয়ন)','85 million (৮৫ মিলিয়ন)','100 million (১০০ মিলিয়ন)','150 million (১৫০ মিলিয়ন)'], ans:1, exp:'Approximately 85 million barrels are burned daily.'},
+
+{id:11, type:'mcq', points:1, q:'What can humans not change? (মানুষ কী পরিবর্তন করতে পারে না?)', opts:['The use of coal (কয়লার ব্যবহার)','The sun\'s radiation (সূর্যের বিকিরণ)','Burning of fossil fuels (জ্বালানি পোড়ানো)','Cutting down trees (গাছ কাটা)'], ans:1, exp:'Humans cannot change the sun\'s radiation.'},
+
+{id:12, type:'mcq', points:1, q:'What else can humans not change? (মানুষ আর কী পরিবর্তন করতে পারে না?)', opts:['Temperature rise (তাপমাত্রা বৃদ্ধি)','Earth\'s orbit around the sun (সূর্যকে ঘিরে পৃথিবীর কক্ষপথ)','Rainfall patterns (বৃষ্টিপাতের ধরণ)','Ocean levels (সমুদ্রের স্তর)'], ans:1, exp:'Humans cannot change the Earth\'s orbit around the sun.'},
+
+{id:13, type:'mcq', points:1, q:'What can humans control? (মানুষ কী নিয়ন্ত্রণ করতে পারে?)', opts:['Deforestation (বন উজাড়)','The amount of greenhouse gases (গ্রিনহাউস গ্যাসের পরিমাণ)','Solar energy (সূর্য শক্তি)','Volcano eruptions (আগ্নেয়গিরির অগ্নুৎপাত)'], ans:1, exp:'Humans can control the amount of greenhouse gases.'},
+
+{id:14, type:'mcq', points:1, q:'When did the rise of carbon dioxide start alarmingly? (কখন থেকে কার্বন ডাইঅক্সাইডের পরিমাণ উদ্বেগজনকভাবে বাড়ে?)', opts:['Last 50 years (গত ৫০ বছর ধরে)','Since industrial revolution (শিল্প বিপ্লব থেকে)','Only during the last hundred years (মাত্র গত ১০০ বছরে)','Since the 21st century (২১শ শতক থেকে)'], ans:2, exp:'The rise started only during the last hundred years.'},
+
+{id:15, type:'mcq', points:1, q:'Who are responsible for the rise of carbon dioxide? (কার্বন ডাইঅক্সাইড বৃদ্ধির জন্য কে দায়ী?)', opts:['Animals (প্রাণীরা)','Natural disasters (প্রাকৃতিক দুর্যোগ)','Humans (মানুষেরা)','Planets (গ্রহগুলো)'], ans:2, exp:'Humans are responsible for the rise of carbon dioxide.'},
+
+{id:16, type:'mcq', points:1, q:'What is the main cause of increased carbon dioxide? (কার্বন ডাইঅক্সাইড বৃদ্ধির প্রধান কারণ কী?)', opts:['Deforestation (বন ধ্বংস)','Vehicle emissions (যানবাহনের ধোঁয়া)','Burning of fossil fuels (জ্বালানি পোড়ানো)','Agricultural activities (কৃষিকাজ)'], ans:2, exp:'Burning fossil fuels is the main cause of increased carbon dioxide.'},
+
+{id:17, type:'mcq', points:1, q:'Since when did industrial activities increase rapidly? (শিল্প কার্যক্রম কবে থেকে দ্রুত বৃদ্ধি পেতে থাকে?)', opts:['Since the 18th century (১৮শ শতক থেকে)','Since the 20th century (২০শ শতক থেকে)','Since the end of the 19th century (১৯শ শতকের শেষ থেকে)','Since the 21st century (২১শ শতক থেকে)'], ans:2, exp:'Industrial activities increased rapidly since the end of the 19th century.'},
+
+{id:18, type:'mcq', points:1, q:'What do factories need to function? (কারখানা চালানোর জন্য কী দরকার?)', opts:['Trees (গাছ)','Energy (শক্তি)','Water (পানি)','Wind (বায়ু)'], ans:1, exp:'Factories need energy to function.'},
+
+{id:19, type:'mcq', points:1, q:'How is energy produced in factories? (কারখানায় শক্তি কীভাবে উৎপন্ন হয়?)', opts:['From wind power (বায়ু শক্তি থেকে)','By using solar panels (সোলার প্যানেল ব্যবহার করে)','By burning coal (কয়লা পোড়ানোর মাধ্যমে)','By using hydro power (জলবিদ্যুৎ থেকে)'], ans:2, exp:'Energy is produced by burning coal in factories.'},
+
+{id:20, type:'mcq', points:1, q:'What are other sources of energy besides coal? (কয়লা ছাড়াও অন্য শক্তির উৎস কী?)', opts:['Wood and air (কাঠ ও বাতাস)','Mineral oil and natural gas (খনিজ তেল ও প্রাকৃতিক গ্যাস)','Water and sunlight (পানি ও সূর্য)','Electricity and wind (বিদ্যুৎ ও বায়ু)'], ans:1, exp:'Other sources include mineral oil and natural gas.'},
+
+{id:21, type:'mcq', points:1, q:'What do people use mineral oil and gas for? (মানুষ খনিজ তেল ও গ্যাস কী জন্য ব্যবহার করে?)', opts:['Planting trees (গাছ লাগানোর জন্য)','Producing food (খাদ্য উৎপাদনের জন্য)','Heating houses, running cars and planes, producing electricity (বাড়ি গরম করা, গাড়ি-উড়োজাহাজ চালানো, বিদ্যুৎ উৎপাদন)','Cooling the air (বাতাস ঠাণ্ডা করার জন্য)'], ans:2, exp:'Mineral oil and gas are used for heating houses, running cars and planes, and producing electricity.'},
+
+{id:22, type:'mcq', points:1, q:'How much crude oil is burned daily nowadays? (আজকাল দিনে কত ব্যারেল অপরিশোধিত তেল পোড়ানো হয়?)', opts:['10 million barrels (১০ মিলিয়ন ব্যারেল)','25 million barrels (২৫ মিলিয়ন ব্যারেল)','85 million barrels (৮৫ মিলিয়ন ব্যারেল)','100 million barrels (১০০ মিলিয়ন ব্যারেল)'], ans:2, exp:'Approximately 85 million barrels of crude oil are burned daily.'},
+
+{id:23, type:'mcq', points:1, q:'What happens when fossil materials are burned? (জ্বালানি পদার্থ পোড়ালে কী ঘটে?)', opts:['Oxygen is produced (অক্সিজেন উৎপন্ন হয়)','Energy is lost (শক্তি নষ্ট হয়)','Carbon dioxide is released (কার্বন ডাইঅক্সাইড নির্গত হয়)','Ice melts (বরফ গলে যায়)'], ans:2, exp:'Burning fossil materials releases carbon dioxide.'},
+
+{id:24, type:'mcq', points:1, q:'What effect does human activity have? (মানব কার্যকলাপের কী প্রভাব পড়ে?)', opts:['Increase in ozone (ওজোন বৃদ্ধি)','Decrease in rainfall (বৃষ্টিপাত কমে যাওয়া)','Increase in greenhouse gases (গ্রিনহাউস গ্যাসের পরিমাণ বৃদ্ধি)','Cooling the climate (আবহাওয়া ঠাণ্ডা হয়ে যাওয়া)'], ans:2, exp:'Human activity increases greenhouse gases.'},
+
+{id:25, type:'mcq', points:1, q:'How else are humans strengthening the greenhouse effect? (আর কীভাবে মানুষ গ্রিনহাউস প্রভাবকে শক্তিশালী করছে?)', opts:['Planting trees (গাছ লাগিয়ে)','Conserving forests (বন সংরক্ষণ করে)','Through deforestation (বন ধ্বংসের মাধ্যমে)','Using renewable energy (নবায়নযোগ্য শক্তি ব্যবহারে)'], ans:2, exp:'Deforestation strengthens the greenhouse effect.'},
+
+{id:26, type:'mcq', points:1, q:'What can humans not change? (মানুষ কী পরিবর্তন করতে পারে না?)', opts:['The amount of greenhouse gases (গ্রিনহাউস গ্যাসের পরিমাণ)','The sun\'s radiation (সূর্যের বিকিরণ)','Industrial activities (শিল্প কার্যক্রম)','Deforestation (বন ধ্বংস)'], ans:1, exp:'Humans cannot change the sun\'s radiation.'},
+
+{id:27, type:'mcq', points:1, q:'What has alarmingly increased in the last hundred years? (গত একশ বছরে কী আশঙ্কাজনকভাবে বেড়েছে?)', opts:['Oxygen concentration (অক্সিজেনের ঘনত্ব)','Industrial development (শিল্প উন্নয়ন)','Carbon dioxide concentration (কার্বন ডাই অক্সাইডের ঘনত্ব)','Renewable energy use (নবায়নযোগ্য শক্তির ব্যবহার)'], ans:2, exp:'Carbon dioxide concentration has alarmingly increased.'},
+
+{id:28, type:'mcq', points:1, q:'Who is responsible for the rise in carbon dioxide? (কার্বন ডাই অক্সাইড বৃদ্ধির জন্য কে দায়ী?)', opts:['Natural processes (প্রাকৃতিক প্রক্রিয়া)','The sun (সূর্য)','Humans (মানুষ)','Animals (প্রাণী)'], ans:2, exp:'Humans are responsible for the rise in carbon dioxide.'},
+
+{id:29, type:'mcq', points:1, q:'What is the main cause of increased carbon dioxide in the atmosphere? (বায়ুমণ্ডলে কার্বন ডাই অক্সাইড বৃদ্ধির প্রধান কারণ কী?)', opts:['Use of fertilizers (সার ব্যবহারে)','Burning fossil fuels (জ্বালানী পোড়ানো)','Fishing (মাছ ধরা)','Deforestation (বন ধ্বংস)'], ans:1, exp:'Burning fossil fuels is the main cause of increased CO₂.'},
+
+{id:30, type:'mcq', points:1, q:'When did industrial activities start to rise rapidly? (শিল্প কার্যক্রম কবে থেকে দ্রুত বাড়তে শুরু করে?)', opts:['In the 21st century (২১শ শতকে)','After World War II (দ্বিতীয় বিশ্বযুদ্ধের পরে)','Since the end of the 19th century (উনবিংশ শতকের শেষ থেকে)','In ancient times (প্রাচীন কালে)'], ans:2, exp:'Industrial activities started rising rapidly since the end of the 19th century.'},
+
+{id:31, type:'mcq', points:1, q:'What kind of energy did early factories use? (প্রথম দিকে কারখানাগুলো কী ধরনের শক্তি ব্যবহার করত?)', opts:['Solar energy (সূর্য শক্তি)','Wind energy (বায়ু শক্তি)','Coal combustion (কয়লা পোড়ানো)','Electricity (বিদ্যুৎ)'], ans:2, exp:'Early factories used coal combustion for energy.'},
+
+{id:32, type:'mcq', points:1, q:'What is produced by burning fossil fuels? (জ্বালানী পোড়ালে কী তৈরি হয়?)', opts:['Oxygen (অক্সিজেন)','Hydrogen (হাইড্রোজেন)','Carbon dioxide (কার্বন ডাই অক্সাইড)','Nitrogen (নাইট্রোজেন)'], ans:2, exp:'Burning fossil fuels produces carbon dioxide.'},
+
+{id:33, type:'mcq', points:1, q:'How many barrels of crude oil are burned daily? (প্রতিদিন কত ব্যারেল অপরিশোধিত তেল পোড়ানো হয়?)', opts:['45 million (৪৫ মিলিয়ন)','60 million (৬০ মিলিয়ন)','70 million (৭০ মিলিয়ন)','85 million (৮৫ মিলিয়ন)'], ans:3, exp:'Approximately 85 million barrels are burned daily.'},
+
+{id:34, type:'mcq', points:1, q:'What do fossil raw materials release when burned? (জ্বালানী পুড়লে কী নির্গত হয়?)', opts:['Oxygen (অক্সিজেন)','Carbon dioxide (কার্বন ডাই অক্সাইড)','Hydrogen (হাইড্রোজেন)','Ozone (ওজোন)'], ans:1, exp:'Carbon dioxide is released when fossil materials are burned.'},
+
+{id:35, type:'mcq', points:1, q:'What are humans generating more of worldwide? (বিশ্বব্যাপী মানুষ কী বেশি তৈরি করছে?)', opts:['Ozone gas (ওজোন গ্যাস)','Fresh air (তাজা বাতাস)','Greenhouse gases (গ্রিনহাউস গ্যাস)','Natural energy (প্রাকৃতিক শক্তি)'], ans:2, exp:'Humans are generating more greenhouse gases worldwide.'},
+
+{id:36, type:'mcq', points:1, q:'What does deforestation mean? (বন ধ্বংস বলতে কী বোঝায়?)', opts:['Planting new trees (নতুন গাছ লাগানো)','Conserving forests (বন সংরক্ষণ)','Cutting down trees (গাছ কেটে ফেলা)','Creating parks (উদ্যান তৈরি)'], ans:2, exp:'Deforestation means cutting down trees.'},
+
+{id:37, type:'mcq', points:1, q:'Why do people destroy forests? (মানুষ কেন বন ধ্বংস করে?)', opts:['To increase oxygen (অক্সিজেন বাড়াতে)','To make roads (রাস্তা তৈরি করতে)','To obtain wood and clear land (কাঠ পেতে এবং জমি পরিষ্কার করতে)','To plant crops (ফসল লাগাতে)'], ans:2, exp:'People destroy forests to obtain wood and clear land.'},
+
+{id:38, type:'mcq', points:1, q:'What happens when trees are burned? (গাছ পোড়ালে কী হয়?)', opts:['Oxygen is created (অক্সিজেন তৈরি হয়)','Carbon dioxide is released (কার্বন ডাই অক্সাইড নির্গত হয়)','Nitrogen is increased (নাইট্রোজেন বেড়ে যায়)','Energy is stored (শক্তি সংরক্ষিত হয়)'], ans:1, exp:'Carbon dioxide is released when trees are burned.'},
+
+{id:39, type:'mcq', points:1, q:'What important function do forests perform? (বন কী গুরুত্বপূর্ণ কাজ করে?)', opts:['Absorb nitrogen (নাইট্রোজেন শোষণ করে)','Produce fossil fuels (জ্বালানী উৎপাদন করে)','Absorb carbon dioxide and give oxygen (কার্বন ডাই অক্সাইড শোষণ করে এবং অক্সিজেন দেয়)','Release heat (তাপ ছাড়ে)'], ans:2, exp:'Forests absorb carbon dioxide and give oxygen.'},
+
+{id:40, type:'mcq', points:1, q:'What happens when we destroy forests? (আমরা যখন বন ধ্বংস করি তখন কী হয়?)', opts:['Rainfall increases (বৃষ্টিপাত বেড়ে যায়)','Carbon dioxide is stored (কার্বন ডাই অক্সাইড সংরক্ষিত হয়)','An important storehouse is lost (একটি গুরুত্বপূর্ণ ভাণ্ডার হারিয়ে যায়)','Trees grow faster (গাছ দ্রুত বাড়ে)'], ans:2, exp:'Destroying forests causes loss of an important storehouse.'},
+
+{id:41, type:'mcq', points:1, q:'Which of the following is a greenhouse gas? (নিম্নের কোনটি একটি গ্রিনহাউস গ্যাস?)', opts:['Oxygen (অক্সিজেন)','Carbon dioxide (কার্বন ডাই অক্সাইড)','Nitrogen (নাইট্রোজেন)','Helium (হেলিয়াম)'], ans:1, exp:'Carbon dioxide is a greenhouse gas.'},
+
+{id:42, type:'mcq', points:1, q:'What is the source of energy for cars and planes as mentioned in the passage? (প্যাসেজ অনুযায়ী গাড়ি ও বিমানের শক্তির উৎস কী?)', opts:['Solar energy (সূর্য শক্তি)','Wind energy (বায়ু শক্তি)','Fossil fuels (জ্বালানী)','Water energy (জল শক্তি)'], ans:2, exp:'Fossil fuels are used as energy for cars and planes.'},
+
+{id:43, type:'mcq', points:1, q:'What is meant by ‘combustion’? (Combustion বলতে কী বোঝায়?)', opts:['Freezing (জমে যাওয়া)','Burning (জ্বলে ওঠা)','Cooling (ঠান্ডা করা)','Mixing (মেশানো)'], ans:1, exp:'Combustion means burning.'},
+
+{id:44, type:'mcq', points:1, q:'What happens to the atmosphere due to burning fossil fuels? (জ্বালানী পোড়ানোর ফলে বায়ুমণ্ডলে কী ঘটে?)', opts:['It becomes cooler (এটি ঠান্ডা হয়)','It becomes polluted with oxygen (অক্সিজেনে দূষিত হয়)','Carbon dioxide increases (কার্বন ডাই অক্সাইড বেড়ে যায়)','No change occurs (কোন পরিবর্তন ঘটে না)'], ans:2, exp:'Burning fossil fuels increases carbon dioxide in the atmosphere.'},
+
+{id:45, type:'mcq', points:1, q:'Why is the rise in carbon dioxide dangerous? (কার্বন ডাই অক্সাইড বৃদ্ধিকে কেন বিপজ্জনক বলা হয়?)', opts:['It increases food (এটি খাদ্য বাড়ায়)','It strengthens the greenhouse effect (এটি গ্রিনহাউস প্রভাবকে শক্তিশালী করে)','It helps trees grow (এটি গাছ বাড়তে সাহায্য করে)','It reduces heat (এটি তাপ কমায়)'], ans:1, exp:'The rise in carbon dioxide strengthens the greenhouse effect.'},
+
+{id:46, type:'mcq', points:1, q:'What is crude oil mainly used for? (অপরিশোধিত তেল প্রধানত কী কাজে ব্যবহৃত হয়?)', opts:['Cooking (রান্না করতে)','Drinking (পান করতে)','Burning for energy (শক্তির জন্য পোড়াতে)','Painting (রং করতে)'], ans:2, exp:'Crude oil is mainly used for burning to produce energy.'},
+
+{id:47, type:'mcq', points:1, q:'What is released when trees are cut and burned? (গাছ কেটে এবং পুড়িয়ে দিলে কী নির্গত হয়?)', opts:['Nitrogen (নাইট্রোজেন)','Oxygen (অক্সিজেন)','Carbon dioxide (কার্বন ডাই অক্সাইড)','Helium (হেলিয়াম)'], ans:2, exp:'Carbon dioxide is released when trees are cut and burned.'},
+
+{id:48, type:'mcq', points:1, q:'Why are forests called a storehouse of carbon dioxide? (বনকে কার্বন ডাই অক্সাইডের ভাণ্ডার বলা হয় কেন?)', opts:['They release carbon dioxide (তারা কার্বন ডাই অক্সাইড ছাড়ে)','They absorb and store it (তারা এটি শোষণ করে ও সংরক্ষণ করে)','They create fossil fuels (তারা জ্বালানী তৈরি করে)','They pollute the air (তারা বাতাস দূষিত করে)'], ans:1, exp:'Forests absorb and store carbon dioxide.'},
+
+{id:49, type:'mcq', points:1, q:'What happens when forests are cleared? (বন পরিষ্কার করলে কী ঘটে?)', opts:['More rain falls (আরও বৃষ্টি হয়)','Oxygen is produced (অক্সিজেন তৈরি হয়)','An important function is lost (একটি গুরুত্বপূর্ণ কাজ হারিয়ে যায়)','Trees grow faster (গাছ দ্রুত বাড়ে)'], ans:2, exp:'Clearing forests causes the loss of an important function.'},
+
+{id:50, type:'mcq', points:1, q:'Which action increases the greenhouse effect most directly? (নিম্নের কোন কাজটি সরাসরি গ্রিনহাউস প্রভাব বাড়ায়?)', opts:['Using electric cars (ইলেকট্রিক গাড়ি ব্যবহার)','Using solar panels (সোলার প্যানেল ব্যবহার)','Burning fossil fuels (জ্বালানী পোড়ানো)','Planting trees (গাছ লাগানো)'], ans:2, exp:'Burning fossil fuels directly increases the greenhouse effect.'}
+];
+  /* --------------------- Helpers --------------------- */
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const shuffle = arr => arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]);
+  const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+  /* --------------------- State --------------------- */
+  let state = {
+    order: [],
+    idx: 0,
+    score: 0,
+    answered: {}, // id -> {your, correct, ok}
+    start: Date.now(),
+    auto: true,
+    mode: 'Mixed' // future: MCQ only / etc
+  };
+
+  function init(){
+    // Randomize questions & MCQ options
+    state.order = shuffle(QUESTIONS.map((q,i)=>({ ...q, _i:i, _optOrder: q.type==='mcq' ? shuffle(q.opts.map((_,k)=>k)) : [] })));
+    state.idx = 0; state.score = 0; state.answered = {}; state.start = Date.now();
+    $('#autoToggle').checked = true; state.auto = true; $('#auto-state').textContent = 'On';
+    render();
+    // editor preload
+    $('#editor').value = JSON.stringify(QUESTIONS, null, 2);
+  }
+
+  function current(){ return state.order[state.idx]; }
+
+  function render(){
+    const q = current();
+    $('#type-badge').textContent = q.type.toUpperCase();
+    $('#q-pill').textContent = `Q ${state.idx+1} / ${state.order.length}`;
+    $('#score-pill').textContent = `Score: ${state.score}`;
+    const pct = (state.idx / state.order.length) * 100; $('#bar').style.width = pct + '%';
+
+    const c = $('#q-container'); c.innerHTML = '';
+    const qEl = document.createElement('div'); qEl.className='q-text'; qEl.textContent = q.q; c.appendChild(qEl);
+
+    if(q.type==='mcq'){
+      const box = document.createElement('div'); box.className='options';
+      q._optOrder.forEach((optIdx)=>{
+        const optEl = document.createElement('div'); optEl.className='opt'; optEl.tabIndex=0;
+        optEl.dataset.value = optIdx; optEl.textContent = q.opts[optIdx];
+        optEl.addEventListener('click', ()=>selectOption(optEl));
+        optEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectOption(optEl);} });
+        box.appendChild(optEl);
+      });
+      c.appendChild(box);
+    }
+    else if(q.type==='tf'){
+      const box = document.createElement('div'); box.className='options';
+      ['True','False'].forEach((label, val)=>{
+        const optEl = document.createElement('div'); optEl.className='opt'; optEl.dataset.value = (label==='True'); optEl.textContent = label;
+        optEl.addEventListener('click', ()=>selectOption(optEl));
+        optEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectOption(optEl);} });
+        box.appendChild(optEl);
+      });
+      c.appendChild(box);
+    }
+    else if(q.type==='fill'){
+      const input = document.createElement('input');
+      input.type='text'; input.placeholder='Type your answer…';
+      input.style.cssText='width:100%;padding:12px;border-radius:12px;border:1px solid #263246;background:#0b1220;color:#e5e7eb';
+      input.id='fill';
+      c.appendChild(input);
+      setTimeout(()=>input.focus(),50);
+    }
+
+    // feedback reset & buttons
+    const fb = $('#feedback'); fb.className='feedback'; fb.textContent='';
+    $('#btn-submit').disabled = false; $('#btn-next').disabled = true;
+    $('#btn-prev').disabled = state.idx===0; $('#btn-skip').disabled = false;
+  }
+
+  function selectOption(el){
+    $$('.opt').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function getUserAnswer(){
+    const q = current();
+    if(q.type==='mcq'){
+      const sel = $('.opt.selected');
+      return sel ? parseInt(sel.dataset.value,10) : null;
+    }
+    if(q.type==='tf'){
+      const sel = $('.opt.selected');
+      return sel ? (sel.dataset.value==='true') : null;
+    }
+    if(q.type==='fill'){
+      const v = $('#fill').value.trim(); return v || null;
+    }
+    return null;
+  }
+
+  function checkAnswer(){
+    const q = current();
+    const fb = $('#feedback');
+    const user = getUserAnswer();
+    if(user===null){ fb.textContent='Please select or type an answer.'; fb.classList.add('show'); return; }
+
+    let ok=false, your, correct;
+    if(q.type==='mcq'){
+      const picked = user; // index in original opts due to dataset
+      const right = q.ans;
+      your = q.opts[picked]; correct = q.opts[right];
+      ok = (picked===right);
+      $$('.opt').forEach(o=>{
+        const val = parseInt(o.dataset.value,10);
+        o.classList.remove('selected');
+        if(val===right) o.classList.add('correct');
+        if(val===picked && val!==right) o.classList.add('wrong');
+      });
+    }
+    else if(q.type==='tf'){
+      const pickedBool = !!user; const rightBool = !!q.ans;
+      your = pickedBool? 'True':'False'; correct = rightBool? 'True':'False';
+      ok = (pickedBool===rightBool);
+      $$('.opt').forEach(o=>{
+        const val = (o.dataset.value==='true');
+        if(val===rightBool) o.classList.add('correct');
+        if(val===pickedBool && val!==rightBool) o.classList.add('wrong');
+      });
+    }
+    else if(q.type==='fill'){
+      const accepted = q.ans.map(s=>s.toLowerCase().replace(/\s+/g,'').trim());
+      const normalized = String(user).toLowerCase().replace(/\s+/g,'').trim();
+      ok = accepted.includes(normalized);
+      your = String(user);
+      correct = q.ans[0];
+    }
+
+    if(ok) state.score += q.points;
+    state.answered[q.id] = { your, correct, ok, type:q.type, q: q.q };
+
+    fb.innerHTML = (ok? `<strong class="success">Correct.</strong>` : `<strong class="error">Incorrect.</strong>`) + ` ${q.exp? ' '+q.exp: ''}`;
+    fb.classList.add('show');
+
+    $('#btn-submit').disabled = true; $('#btn-next').disabled = (state.idx>=state.order.length-1);
+
+    if(state.auto && state.idx<state.order.length-1){
+      setTimeout(()=>goNext(), 1200);
+    }
+    updateHeader();
+  }
+
+  function updateHeader(){
+    $('#score-pill').textContent = `Score: ${state.score}`;
+    $('#q-pill').textContent = `Q ${state.idx+1} / ${state.order.length}`;
+    $('#mode-pill').textContent = `Mode: ${state.mode}`;
+    $('#bar').style.width = ((state.idx)/state.order.length*100)+ '%';
+  }
+
+  function goNext(){ if(state.idx < state.order.length-1){ state.idx++; render(); } else { finish(); } }
+  function goPrev(){ if(state.idx>0){ state.idx--; render(); } }
+  function skip(){ state.idx++; if(state.idx>=state.order.length) finish(); else render(); }
+
+  function finish(){
+    $('#quiz-card').style.display='none';
+    const total = state.order.reduce((s,q)=>s+q.points,0);
+    const time = Math.round((Date.now()-state.start)/1000);
+    const pct = Math.round((state.score/total)*100);
+    const correct = Object.values(state.answered).filter(a=>a.ok).length;
+    const summary = `You scored ${state.score} / ${total} (${pct}%). Correct: ${correct} of ${state.order.length}. Time: ${time}s.`;
+    $('#summary').textContent = summary;
+    // breakdown chips
+    const types = ['mcq','tf','fill'];
+    const box = $('#breakdown'); box.innerHTML='';
+    types.forEach(t=>{
+      const totalT = state.order.filter(q=>q.type===t).length;
+      const okT = Object.values(state.answered).filter(a=>a.type===t && a.ok).length;
+      const chip = document.createElement('span'); chip.className='badge'; chip.textContent = `${t.toUpperCase()}: ${okT}/${totalT}`; box.appendChild(chip);
+    });
+    // review table
+    const tb = $('#review-table tbody'); tb.innerHTML='';
+    state.order.forEach((q, i)=>{
+      const a = state.answered[q.id] || {your:'—', ok:false, correct: q.type==='tf'? (q.ans? 'True':'False') : (q.type==='mcq'? q.opts[q.ans] : (q.ans[0]))};
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${q.type.toUpperCase()}</td><td>${q.q}</td><td>${a.your}</td><td>${a.correct}</td><td>${a.ok? '✅':'❌'}</td>`;
+      tb.appendChild(tr);
+    });
+    $('#result-card').style.display='block';
+  }
+
+  // Timer
+  setInterval(()=>{ const s = Math.round((Date.now()- (state.start||Date.now()))/1000); $('#timer').textContent = `Time: ${s}s`; }, 1000);
+
+  // Events
+  $('#btn-submit').addEventListener('click', checkAnswer);
+  $('#btn-next').addEventListener('click', ()=>{ state.idx = clamp(state.idx+1,0,state.order.length-1); render(); });
+  $('#btn-prev').addEventListener('click', goPrev);
+  $('#btn-skip').addEventListener('click', skip);
+  $('#autoToggle').addEventListener('change', (e)=>{ state.auto = e.target.checked; $('#auto-state').textContent = state.auto? 'On':'Off'; });
+  $('#btn-restart').addEventListener('click', ()=>{ $('#result-card').style.display='none'; $('#quiz-card').style.display='block'; init(); });
+  $('#btn-print').addEventListener('click', ()=>window.print());
+
+  // Teacher panel live edit
+  $('#btn-apply').addEventListener('click', ()=>{
+    try{
+      const arr = JSON.parse($('#editor').value);
+      if(!Array.isArray(arr)) throw new Error('JSON must be an array');
+      QUESTIONS.length = 0; arr.forEach(o=>QUESTIONS.push(o));
+      init();
+      alert('Applied! Questions reloaded.');
+    }catch(e){ alert('Invalid JSON: '+e.message); }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight') goNext();
+    if(e.key==='ArrowLeft') goPrev();
+    if(e.key.toLowerCase()==='s' && (e.ctrlKey||e.metaKey)){
+      e.preventDefault();
+      const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mother-teresa-quiz.html'; a.click();
+    }
+  });
+
+  // init
+  init();
+  </script>
+</body>
+</html>

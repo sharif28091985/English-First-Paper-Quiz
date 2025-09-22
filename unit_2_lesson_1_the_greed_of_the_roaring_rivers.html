@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mother Teresa — Interactive Quiz</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --card:#111827ee; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22c55e; /* green-500 */
+      --accent-2:#6366f1; /* indigo-500 */
+      --warn:#ef4444; /* red-500 */
+      --ok:#10b981; /* emerald-500 */
+      --chip:#1f2937; /* gray-800 */
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 600px at 10% 0%,#0b1220 0%,#0b1220 30%,#0f172a 70%),var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);}
+    .wrap{max-width:980px;margin:32px auto;padding:16px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:clamp(20px,3vw,28px);margin:0}
+    .subtitle{color:var(--muted);font-size:14px}
+    .card{background:linear-gradient(180deg,#0b1220, #0b1220dd 70%, #0b1220),var(--card);border:1px solid #1f2937;border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .pill{background:var(--chip);color:#cbd5e1;border:1px solid #2a3345;padding:6px 10px;border-radius:999px;font-size:12px}
+    .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button{all:unset;background:#1f2937; padding:10px 14px;border-radius:12px;cursor:pointer;border:1px solid #2a3345}
+    button:hover{transform:translateY(-1px)}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:0;color:white}
+    button.ghost{background:transparent}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+    .q-text{font-size:18px;line-height:1.5;margin-bottom:10px}
+    .options{display:grid;gap:10px}
+    .opt{background:#0f172a;border:1px solid #263246;padding:12px;border-radius:14px;cursor:pointer}
+    .opt:hover{border-color:#3b4966}
+    .opt.selected{outline:2px solid #475569}
+    .opt.correct{border-color:var(--ok);background:#052e22}
+    .opt.wrong{border-color:var(--warn);background:#2a0d11}
+    .progress{height:10px;background:#1f2937;border-radius:999px;overflow:hidden}
+    .bar{height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));width:0%}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;color:#cbd5e1;font-size:13px;margin:10px 0}
+    .feedback{margin-top:10px;padding:10px;border-radius:12px;background:#0b1220;border:1px solid #263246;display:none}
+    .feedback.show{display:block}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#0b1220;border:1px solid #2a3345;border-radius:6px;padding:2px 6px;font-size:12px;color:#cbd5e1}
+    .footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .toggle{display:inline-flex;gap:8px;align-items:center}
+    input[type="checkbox"]{accent-color:#22c55e;}
+    .review{margin-top:18px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #243046;padding:10px;text-align:left}
+    .muted{color:var(--muted)}
+    .badge{padding:6px 8px;border-radius:8px;background:#0b1220;border:1px solid #263246;font-size:12px}
+    .success{color:#10b981}
+    .error{color:#ef4444}
+    .center{display:flex;justify-content:center;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>UNit 2, Lesson 1, The Greed of the Roaring Rivers</h1>
+        <div class="subtitle">By Sharif Uddin.</div>
+      </div>
+      <div class="row">
+        <span class="pill" id="mode-pill">Mode: Mixed</span>
+        <span class="pill" id="score-pill">Score: 0</span>
+        <span class="pill" id="q-pill">Q 0 / 0</span>
+      </div>
+    </header>
+
+    <div class="card" id="quiz-card">
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="meta">
+        <span class="badge" id="type-badge">MCQ</span>
+        <span class="badge">Auto-advance: <span id="auto-state">On</span></span>
+        <span class="badge" id="timer">Time: 0s</span>
+      </div>
+      <div id="q-container">
+        <!-- question will render here -->
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="footer">
+        <div class="controls">
+          <button class="ghost" id="btn-prev">⟵ Prev</button>
+          <button id="btn-submit" class="primary">Submit</button>
+          <button id="btn-next">Next ⟶</button>
+          <button class="ghost" id="btn-skip">Skip</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="autoToggle" checked /> Auto next</label>
+      </div>
+    </div>
+
+    <div class="card review" id="result-card" style="display:none">
+      <h2>Result</h2>
+      <p class="muted" id="summary"></p>
+      <div id="breakdown" class="row"></div>
+      <h3>Review Answers</h3>
+      <table id="review-table">
+        <thead>
+          <tr><th>#</th><th>Type</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-restart">Restart Quiz</button>
+        <button id="btn-print">Print / Save PDF</button>
+      </div>
+    </div>
+
+    <details class="card" style="margin-top:16px">
+      <summary>🧰 Teacher Panel (edit questions live)</summary>
+      <p class="muted">You can copy/download this file and edit the <code>QUESTIONS</code> array below to customize. Changes here only apply while the page is open.</p>
+      <textarea id="editor" style="width:100%;height:220px;background:#0b1220;color:#e5e7eb;border:1px solid #263246;border-radius:12px;padding:10px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-apply">Apply JSON</button>
+        <span class="muted">Tip: Press <span class="kbd">Ctrl/⌘ + S</span> to download this page.</span>
+      </div>
+    </details>
+
+  </div>
+
+  <script>
+  /* --------------------- Data: Questions from the passage --------------------- */
+  const QUESTIONS = [
+    // MCQ
+{id:1,type:'mcq', points:1, q:'Where does Meherjan live now? (মেহেরজান এখন কোথায় থাকেন?)', opts:['In a village (গ্রামে)','In a city flat (শহরের ফ্ল্যাটে)','In a slum in Dhaka (ঢাকার একটি বস্তিতে)','In a shelter home (আশ্রয় কেন্দ্রে)'], ans:3, exp:'Meherjan now lives in a shelter home.'},
+{id:2,type:'mcq', points:1, q:'Why did Meherjan lose her shelter? (মেহেরজান কেন তার আশ্রয় হারিয়েছেন?)', opts:['Because of river erosion (নদীভাঙনের কারণে)','Due to fire (আগুনের কারণে)','Because of earthquake (ভূমিকম্পের কারণে)','Due to cyclone (ঘূর্ণিঝড়ের কারণে)'], ans:0, exp:'She lost her shelter due to river erosion.'},
+{id:3,type:'mcq', points:1, q:'What is the name of Meherjan\'s village? (মেহেরজানের গ্রামের নাম কী?)', opts:['Rajshahi (রাজশাহী)','Gaibandha (গাইবান্ধা)','Bogura (বগুড়া)','Sirajgonj (সিরাজগঞ্জ)'], ans:3, exp:'Her village is Sirajgonj.'},
+{id:4,type:'mcq', points:1, q:'What happened to Meherjan’s husband? (মেহেরজানের স্বামীর কী হয়েছিল?)', opts:['He left her (তিনি তাকে ছেড়ে চলে যান)','He died of illness (তিনি অসুস্থতায় মারা যান)','He was lost in the flood (তিনি বন্যায় নিখোঁজ হন)','He married another woman (তিনি আরেকটি বিয়ে করেন)'], ans:1, exp:'He died of illness.'},
+{id:5,type:'mcq', points:1, q:'What kind of life is Meherjan living now? (মেহেরজান এখন কেমন জীবন যাপন করছেন?)', opts:['A luxurious life (একটি বিলাসবহুল জীবন)','A poor and helpless life (একটি দরিদ্র ও অসহায় জীবন)','A peaceful life (একটি শান্তিপূর্ণ জীবন)','A working woman’s life (একটি কর্মজীবী নারীর জীবন)'], ans:1, exp:'She is living a poor and helpless life.'},
+{id:6,type:'mcq', points:1, q:'What is the main reason behind river erosion in Bangladesh? (বাংলাদেশে নদীভাঙনের প্রধান কারণ কী?)', opts:['Cyclones (ঘূর্ণিঝড়)','Floods (বন্যা)','Climate change (জলবায়ু পরিবর্তন)','Deforestation (বনভূমি উজাড়)'], ans:2, exp:'Climate change is the main reason behind river erosion.'},
+{id:7,type:'mcq', points:1, q:'How does climate change affect people like Meherjan? (জলবায়ু পরিবর্তন মেহেরজানের মতো মানুষকে কীভাবে প্রভাবিত করে?)', opts:['Provides them jobs (তাদের চাকরি দেয়)','Makes them richer (তাদের ধনী করে তোলে)','Forces them to leave homes (তাদের ঘর ছেড়ে যেতে বাধ্য করে)','Helps them grow crops (তাদের ফসল ফলাতে সাহায্য করে)'], ans:2, exp:'Climate change forces them to leave their homes.'},
+{id:8,type:'mcq', points:1, q:'What is river erosion? (নদীভাঙন কী?)', opts:['Formation of new rivers (নতুন নদী সৃষ্টি)','Breaking of river banks (নদীর পাড় ভেঙে যাওয়া)','Flooding of fields (ক্ষেত ডুবে যাওয়া)','Drought in river areas (নদী এলাকায় খরা)'], ans:1, exp:'River erosion is the breaking of river banks.'},
+{id:9,type:'mcq', points:1, q:'What type of people are mainly victims of river erosion? (নদীভাঙনের প্রধান ভুক্তভোগীরা কারা?)', opts:['City dwellers (শহরের বাসিন্দারা)','Rich businessmen (ধনী ব্যবসায়ীরা)','Rural poor people (গ্রামীণ দরিদ্র মানুষ)','Foreigners (বিদেশিরা)'], ans:2, exp:'Rural poor people are mainly affected.'},
+{id:10,type:'mcq', points:1, q:'What natural disaster destroyed Meherjan’s village? ( কোন প্রাকৃতিক দুর্যোগ মেহেরজানের গ্রাম ধ্বংস করে দেয়?)', opts:['Earthquake (ভূমিকম্প)','Flood (বন্যা)','River erosion (নদীভাঙন)','Cyclone (ঘূর্ণিঝড়)'], ans:2, exp:'River erosion destroyed her village.'},
+{id:11,type:'mcq', points:1, q:'Which group is most vulnerable to climate change according to the passage? (পাঠ্য অনুযায়ী কোন গোষ্ঠীটি জলবায়ু পরিবর্তনের কারণে সবচেয়ে বেশি ঝুঁকির মুখে?)', opts:['Wealthy landlords (ধনী জমিদাররা)','Farmers and the poor (কৃষক ও দরিদ্ররা)','Politicians (রাজনীতিবিদরা)','Industrialists (শিল্পপতিরা)'], ans:1, exp:'Farmers and the poor are most vulnerable.'},
+{id:12,type:'mcq', points:1, q:'How did Meherjan lose her house? (কীভাবে মেহেরজান তার ঘর হারিয়েছেন?)', opts:['Fire destroyed it (আগুনে পুড়ে গেছে)','River erosion washed it away (নদীভাঙন তা ভাসিয়ে নিয়ে যায়)','Thieves looted it (চোরেরা লুট করেছে)','Government removed it (সরকার তা সরিয়ে দিয়েছে)'], ans:1, exp:'River erosion washed away her house.'},
+{id:13,type:'mcq', points:1, q:'Where is Meherjan originally from? (মেহেরজান মূলত কোথা থেকে এসেছেন?)', opts:['From a coastal area (উপকূলীয় এলাকা থেকে)','From a rural village (একটি গ্রাম থেকে)','From a hill tract (পার্বত্য এলাকা থেকে)','From a refugee camp (শরণার্থী ক্যাম্প থেকে)'], ans:1, exp:'She is originally from a rural village.'},
+{id:14,type:'mcq', points:1, q:'What does Meherjan now depend on? (এখন মেহেরজান কী নির্ভর করেন?)', opts:['Farming (কৃষিকাজ)','Her relatives (আত্মীয়দের উপর)','Social support or charity (সামাজিক সহায়তা বা দান)','Her job (তার চাকরি)'], ans:2, exp:'She now depends on social support or charity.'},
+{id:15,type:'mcq', points:1, q:'What is the main reason behind Meherjan’s condition? (মেহেরজানের অবস্থার মূল কারণ কী?)', opts:['Poverty (দারিদ্র্য)','Climate change (জলবায়ু পরিবর্তন)','Family dispute (পারিবারিক কলহ)','Unemployment (বেকারত্ব)'], ans:1, exp:'Climate change is the main reason for her condition.'},
+{id:16,type:'mcq', points:1, q:'What type of people are affected like Meherjan? (মেহেরজানের মতো কী ধরনের মানুষরা ক্ষতিগ্রস্ত?)', opts:['Rich people (ধনী লোকজন)','Foreigners (বিদেশিরা)','Poor and marginal people (গরিব ও প্রান্তিক মানুষ)','Businessmen (ব্যবসায়ীরা)'], ans:2, exp:'Poor and marginal people are affected like her.'},
+{id:17,type:'mcq', points:1, q:'What does river erosion cause in people’s lives? (নদীভাঙন মানুষের জীবনে কী ঘটায়?)', opts:['Better living (উন্নত জীবন)','Displacement and loss (স্থানচ্যুতি ও ক্ষতি)','Job creation (কর্মসংস্থান সৃষ্টি)','Tourism growth (পর্যটনের বৃদ্ধি)'], ans:1, exp:'It causes displacement and loss.'},
+{id:18,type:'mcq', points:1, q:'What is the tone of the passage about Meherjan? (মেহেরজান সম্পর্কে অনুচ্ছেদটির স্বর কী?)', opts:['Joyful (আনন্দময়)','Neutral (নিরপেক্ষ)','Sorrowful (দুঃখজনক)','Humorous (হাস্যরসাত্মক)'], ans:2, exp:'The tone of the passage is sorrowful.'},
+{id:19,type:'mcq', points:1, q:'What can be a solution for people like Meherjan? (মেহেরজানের মতো মানুষের জন্য কী হতে পারে একটি সমাধান?)', opts:['Ignoring their problems (তাদের সমস্যা উপেক্ষা করা)','Climate action and rehabilitation (জলবায়ু পদক্ষেপ ও পুনর্বাসন)','Migration to cities (শহরে চলে যাওয়া)','Giving them charity once (একবার দান করা)'], ans:1, exp:'Climate action and rehabilitation is a solution.'},
+{id:20,type:'mcq', points:1, q:'What lesson can be learned from Meherjan’s life? (মেহেরজানের জীবনের থেকে কী শিক্ষা পাওয়া যায়?)', opts:['Save money for the future (ভবিষ্যতের জন্য টাকা জমাতে হবে)','Do not trust anyone (কাউকে বিশ্বাস করা যাবে না)','Climate change can destroy lives (জলবায়ু পরিবর্তন মানুষের জীবন ধ্বংস করতে পারে)','Government should help the rich (সরকার ধনীদের সাহায্য করা উচিত)'], ans:2, exp:'The lesson is that climate change can destroy lives.'},
+{id:21,type:'mcq', points:1, q:'What natural disaster displaced Meherjan? (কোন প্রাকৃতিক দুর্যোগ মেহেরজানকে বাস্তুহীন করেছে?)', opts:['Cyclone (ঘূর্ণিঝড়)','Earthquake (ভূমিকম্প)','River erosion (নদীভাঙন)','Flood (বন্যা)'], ans:2, exp:'River erosion displaced Meherjan.'},
+{id:22,type:'mcq', points:1, q:'What happened to Meherjan’s land? (মেহেরজানের জমির কী হয়েছে?)', opts:['It was sold (এটি বিক্রি হয়ে গেছে)','It was taken by the government (সরকার নিয়ে নিয়েছে)','It was eroded by the river (নদীভাঙনে বিলীন হয়েছে)','It is still intact (এখনো অক্ষত আছে)'], ans:2, exp:'Her land was eroded by the river.'},
+{id:23,type:'mcq', points:1, q:'What happened to Meherjan’s husband? (মেহেরজানের স্বামীর কী হয়েছিল?)', opts:['He died from a disease (তিনি রোগে মারা যান)','He abandoned her (তিনি তাকে ফেলে চলে যান)','He drowned in the river (তিনি নদীতে ডুবে যান)','He is still alive (তিনি এখনো বেঁচে আছেন)'], ans:0, exp:'Her husband died from a disease.'},
+{id:24,type:'mcq', points:1, q:'What is the tone of the passage? (এই পাঠটির ভাবধারা কেমন?)', opts:['Humorous (কৌতুকপূর্ণ)','Tragic and reflective (করুণ এবং চিন্তনমূলক)','Joyful (আনন্দময়)','Satirical (ব্যঙ্গাত্মক)'], ans:1, exp:'The tone is tragic and reflective.'},
+{id:25,type:'mcq', points:1, q:'What kind of problem is described in Meherjan’s story? (মেহেরজানের গল্পে কী ধরনের সমস্যা বর্ণিত হয়েছে?)', opts:['Educational problem (শিক্ষা সমস্যা)','Environmental and social problem (পরিবেশ ও সামাজিক সমস্যা)','Economic problem only (শুধু অর্থনৈতিক সমস্যা)','Political problem (রাজনৈতিক সমস্যা)'], ans:1, exp:'It is an environmental and social problem.'},
+{id:26,type:'mcq', points:1, q:'Where did Meherjan once live before being displaced? (বাস্তুহীন হওয়ার আগে মেহেরজান কোথায় থাকতেন?)', opts:['In a village beside the river (নদীর পাশের গ্রামে)','In the city center (শহরের কেন্দ্রে)','In a mountain area (পাহাড়ি এলাকায়)','In a refugee camp (শরণার্থী শিবিরে)'], ans:0, exp:'She lived in a village beside the river.'},
+{id:27,type:'mcq', points:1, q:'What type of problem is river erosion considered in Bangladesh? (বাংলাদেশে নদীভাঙন কী ধরনের সমস্যা হিসেবে গণ্য?)', opts:['Local problem (স্থানীয় সমস্যা)','National problem (জাতীয় সমস্যা)','Minor issue (ছোটখাটো সমস্যা)','International issue (আন্তর্জাতিক সমস্যা)'], ans:1, exp:'River erosion is considered a national problem.'},
+{id:28,type:'mcq', points:1, q:'Which of the following is a result of river erosion? (নিচের কোনটি নদীভাঙনের ফলাফল?)', opts:['Job creation (চাকরি সৃষ্টি)','Increase in education (শিক্ষার উন্নতি)','Homelessness (গৃহহীনতা)','Tourism growth (পর্যটনের বৃদ্ধি)'], ans:2, exp:'Homelessness is a result of river erosion.'},
+{id:29,type:'mcq', points:1, q:'What is Meherjan’s living condition now? (এখন মেহেরজানের বসবাসের অবস্থা কেমন?)', opts:['Luxurious (বিলাসবহুল)','Comfortable (আরামদায়ক)','Miserable (দুর্দশাগ্রস্ত)','Satisfactory (সন্তোষজনক)'], ans:2, exp:'Her current condition is miserable.'},
+{id:30,type:'mcq', points:1, q:'What type of people live in the area where Meherjan lives now? (যেখানে মেহেরজান এখন থাকেন, সেখানে কী ধরনের মানুষ বসবাস করেন?)', opts:['Rich businessmen (ধনী ব্যবসায়ী)','Poor climate refugees (দরিদ্র জলবায়ু শরণার্থী)','City officials (শহরের কর্মকর্তারা)','Migrant workers (অভিবাসী শ্রমিক)'], ans:1, exp:'Poor climate refugees live there.'},
+{id:31,type:'mcq', points:1, q:'What happened to many people like Meherjan? (মেহেরজানের মতো অনেক লোকের কী হয়েছে?)', opts:['They got jobs (তারা চাকরি পেয়েছে)','They became rich (তারা ধনী হয়েছে)','They lost homes and land (তারা ঘরবাড়ি ও জমি হারিয়েছে)','They migrated abroad (তারা বিদেশে চলে গেছে)'], ans:2, exp:'Many lost homes and land like Meherjan.'},
+{id:32,type:'mcq', points:1, q:'What issue does the passage mainly highlight? (অনুচ্ছেদটি প্রধানত কোন বিষয়টি তুলে ধরেছে?)', opts:['Urban development (শহর উন্নয়ন)','Climate change and displacement (জলবায়ু পরিবর্তন ও বাস্তুচ্যুতি)','Traditional farming (ঐতিহ্যবাহী কৃষি)','Technological progress (প্রযুক্তিগত অগ্রগতি)'], ans:1, exp:'The passage highlights climate change and displacement.'},
+{id:33,type:'mcq', points:1, q:'What does Meherjan symbolize in the passage? (এই পাঠে মেহেরজান কী প্রতীক হিসেবে উপস্থাপিত হয়েছেন?)', opts:['Political victim (রাজনৈতিক ভুক্তভোগী)','Natural survivor (প্রাকৃতিক দুর্যোগ থেকে বেঁচে যাওয়া ব্যক্তি)','Victim of climate change (জলবায়ু পরিবর্তনের শিকার)','Poor student (গরিব শিক্ষার্থী)'], ans:2, exp:'She symbolizes a victim of climate change.'},
+{id:34,type:'mcq', points:1, q:'What is the main cause of Meherjan’s suffering? (মেহেরজানের দুঃখ-কষ্টের মূল কারণ কী?)', opts:['Political injustice (রাজনৈতিক অবিচার)','Climate disaster (জলবায়ু বিপর্যয়)','Social discrimination (সামাজিক বৈষম্য)','Lack of education (শিক্ষার অভাব)'], ans:1, exp:'The main cause is a climate disaster.'},
+{id:35,type:'mcq', points:1, q:'What is the result of river erosion in rural areas? (গ্রামীণ এলাকায় নদীভাঙনের ফলাফল কী?)', opts:['Industrialization (শিল্পায়ন)','Development (উন্নয়ন)','Poverty and displacement (দারিদ্র্য ও বাস্তুচ্যুতি)','Better roads (উন্নত রাস্তা)'], ans:2, exp:'It causes poverty and displacement.'},
+{id:36,type:'mcq', points:1, q:'What message does the writer want to convey? (লেখক কী বার্তা দিতে চান?)', opts:['Village life is better (গ্রামীণ জীবন ভালো)','Natural disasters are rare (প্রাকৃতিক দুর্যোগ বিরল)','People like Meherjan need help (মেহেরজানের মতো মানুষদের সাহায্য প্রয়োজন)','Everyone should move to cities (সবারকে শহরে চলে যেতে হবে)'], ans:2, exp:'The message is that people like Meherjan need help.'},
+{id:37,type:'mcq', points:1, q:'What is the author’s attitude toward Meherjan’s situation? (মেহেরজানের অবস্থার প্রতি লেখকের মনোভাব কেমন?)', opts:['Mocking (উপহাসমূলক)','Supportive (সহানুভূতিশীল)','Angry (রাগান্বিত)','Neutral (নিরপেক্ষ)'], ans:1, exp:'The author is supportive toward her situation.'},
+{id:38,type:'mcq', points:1, q:'What can be a solution for people like Meherjan? (মেহেরজানের মতো মানুষের জন্য কী হতে পারে একটি সমাধান?)', opts:['Ignoring their problems (তাদের সমস্যা উপেক্ষা করা)','Climate action and rehabilitation (জলবায়ু পদক্ষেপ ও পুনর্বাসন)','Migration to cities (শহরে চলে যাওয়া)','Giving them charity once (একবার দান করা)'], ans:1, exp:'Climate action and rehabilitation is a solution.'},
+{id:39,type:'mcq', points:1, q:'What was Meherjan’s financial condition before becoming homeless? (মেহেরজান গৃহহীন হওয়ার আগে তাঁর আর্থিক অবস্থা কেমন ছিল?)', opts:['Very rich (খুব ধনী)','Poor (গরিব)','Middle class (মধ্যবিত্ত)','Wealthy landlord (জমিদার)'], ans:2, exp:'She was middle class before becoming homeless.'},
+{id:40,type:'mcq', points:1, q:'What was Meherjan’s main source of livelihood before she lost everything? (মেহেরজান তার সব কিছু হারানোর আগে জীবিকার প্রধান উৎস কী ছিল?)', opts:['Teaching (শিক্ষকতা)','Agriculture (কৃষিকাজ)','Business (ব্যবসা)','Government job (সরকারি চাকরি)'], ans:1, exp:'Her main source of livelihood was agriculture.'},
+{id:41,type:'mcq', points:1, q:'How was her house destroyed? (তার ঘর কীভাবে ধ্বংস হয়েছিল?)', opts:['Fire (আগুন)','Cyclone (ঘূর্ণিঝড়)','River erosion (নদী ভাঙন)','Earthquake (ভূমিকম্প)'], ans:2, exp:'Her house was destroyed by river erosion.'},
+{id:42,type:'mcq', points:1, q:'What natural disaster made her homeless? (কোন প্রাকৃতিক দুর্যোগে মেহেরজান গৃহহীন হয়েছিলেন?)', opts:['Flood (বন্যা)','River erosion (নদী ভাঙন)','Storm surge (জলোচ্ছ্বাস)','Earthquake (ভূমিকম্প)'], ans:1, exp:'River erosion made her homeless.'}
+];
+  /* --------------------- Helpers --------------------- */
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const shuffle = arr => arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]);
+  const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+  /* --------------------- State --------------------- */
+  let state = {
+    order: [],
+    idx: 0,
+    score: 0,
+    answered: {}, // id -> {your, correct, ok}
+    start: Date.now(),
+    auto: true,
+    mode: 'Mixed' // future: MCQ only / etc
+  };
+
+  function init(){
+    // Randomize questions & MCQ options
+    state.order = shuffle(QUESTIONS.map((q,i)=>({ ...q, _i:i, _optOrder: q.type==='mcq' ? shuffle(q.opts.map((_,k)=>k)) : [] })));
+    state.idx = 0; state.score = 0; state.answered = {}; state.start = Date.now();
+    $('#autoToggle').checked = true; state.auto = true; $('#auto-state').textContent = 'On';
+    render();
+    // editor preload
+    $('#editor').value = JSON.stringify(QUESTIONS, null, 2);
+  }
+
+  function current(){ return state.order[state.idx]; }
+
+  function render(){
+    const q = current();
+    $('#type-badge').textContent = q.type.toUpperCase();
+    $('#q-pill').textContent = `Q ${state.idx+1} / ${state.order.length}`;
+    $('#score-pill').textContent = `Score: ${state.score}`;
+    const pct = (state.idx / state.order.length) * 100; $('#bar').style.width = pct + '%';
+
+    const c = $('#q-container'); c.innerHTML = '';
+    const qEl = document.createElement('div'); qEl.className='q-text'; qEl.textContent = q.q; c.appendChild(qEl);
+
+    if(q.type==='mcq'){
+      const box = document.createElement('div'); box.className='options';
+      q._optOrder.forEach((optIdx)=>{
+        const optEl = document.createElement('div'); optEl.className='opt'; optEl.tabIndex=0;
+        optEl.dataset.value = optIdx; optEl.textContent = q.opts[optIdx];
+        optEl.addEventListener('click', ()=>selectOption(optEl));
+        optEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectOption(optEl);} });
+        box.appendChild(optEl);
+      });
+      c.appendChild(box);
+    }
+    else if(q.type==='tf'){
+      const box = document.createElement('div'); box.className='options';
+      ['True','False'].forEach((label, val)=>{
+        const optEl = document.createElement('div'); optEl.className='opt'; optEl.dataset.value = (label==='True'); optEl.textContent = label;
+        optEl.addEventListener('click', ()=>selectOption(optEl));
+        optEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectOption(optEl);} });
+        box.appendChild(optEl);
+      });
+      c.appendChild(box);
+    }
+    else if(q.type==='fill'){
+      const input = document.createElement('input');
+      input.type='text'; input.placeholder='Type your answer…';
+      input.style.cssText='width:100%;padding:12px;border-radius:12px;border:1px solid #263246;background:#0b1220;color:#e5e7eb';
+      input.id='fill';
+      c.appendChild(input);
+      setTimeout(()=>input.focus(),50);
+    }
+
+    // feedback reset & buttons
+    const fb = $('#feedback'); fb.className='feedback'; fb.textContent='';
+    $('#btn-submit').disabled = false; $('#btn-next').disabled = true;
+    $('#btn-prev').disabled = state.idx===0; $('#btn-skip').disabled = false;
+  }
+
+  function selectOption(el){
+    $$('.opt').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function getUserAnswer(){
+    const q = current();
+    if(q.type==='mcq'){
+      const sel = $('.opt.selected');
+      return sel ? parseInt(sel.dataset.value,10) : null;
+    }
+    if(q.type==='tf'){
+      const sel = $('.opt.selected');
+      return sel ? (sel.dataset.value==='true') : null;
+    }
+    if(q.type==='fill'){
+      const v = $('#fill').value.trim(); return v || null;
+    }
+    return null;
+  }
+
+  function checkAnswer(){
+    const q = current();
+    const fb = $('#feedback');
+    const user = getUserAnswer();
+    if(user===null){ fb.textContent='Please select or type an answer.'; fb.classList.add('show'); return; }
+
+    let ok=false, your, correct;
+    if(q.type==='mcq'){
+      const picked = user; // index in original opts due to dataset
+      const right = q.ans;
+      your = q.opts[picked]; correct = q.opts[right];
+      ok = (picked===right);
+      $$('.opt').forEach(o=>{
+        const val = parseInt(o.dataset.value,10);
+        o.classList.remove('selected');
+        if(val===right) o.classList.add('correct');
+        if(val===picked && val!==right) o.classList.add('wrong');
+      });
+    }
+    else if(q.type==='tf'){
+      const pickedBool = !!user; const rightBool = !!q.ans;
+      your = pickedBool? 'True':'False'; correct = rightBool? 'True':'False';
+      ok = (pickedBool===rightBool);
+      $$('.opt').forEach(o=>{
+        const val = (o.dataset.value==='true');
+        if(val===rightBool) o.classList.add('correct');
+        if(val===pickedBool && val!==rightBool) o.classList.add('wrong');
+      });
+    }
+    else if(q.type==='fill'){
+      const accepted = q.ans.map(s=>s.toLowerCase().replace(/\s+/g,'').trim());
+      const normalized = String(user).toLowerCase().replace(/\s+/g,'').trim();
+      ok = accepted.includes(normalized);
+      your = String(user);
+      correct = q.ans[0];
+    }
+
+    if(ok) state.score += q.points;
+    state.answered[q.id] = { your, correct, ok, type:q.type, q: q.q };
+
+    fb.innerHTML = (ok? `<strong class="success">Correct.</strong>` : `<strong class="error">Incorrect.</strong>`) + ` ${q.exp? ' '+q.exp: ''}`;
+    fb.classList.add('show');
+
+    $('#btn-submit').disabled = true; $('#btn-next').disabled = (state.idx>=state.order.length-1);
+
+    if(state.auto && state.idx<state.order.length-1){
+      setTimeout(()=>goNext(), 1200);
+    }
+    updateHeader();
+  }
+
+  function updateHeader(){
+    $('#score-pill').textContent = `Score: ${state.score}`;
+    $('#q-pill').textContent = `Q ${state.idx+1} / ${state.order.length}`;
+    $('#mode-pill').textContent = `Mode: ${state.mode}`;
+    $('#bar').style.width = ((state.idx)/state.order.length*100)+ '%';
+  }
+
+  function goNext(){ if(state.idx < state.order.length-1){ state.idx++; render(); } else { finish(); } }
+  function goPrev(){ if(state.idx>0){ state.idx--; render(); } }
+  function skip(){ state.idx++; if(state.idx>=state.order.length) finish(); else render(); }
+
+  function finish(){
+    $('#quiz-card').style.display='none';
+    const total = state.order.reduce((s,q)=>s+q.points,0);
+    const time = Math.round((Date.now()-state.start)/1000);
+    const pct = Math.round((state.score/total)*100);
+    const correct = Object.values(state.answered).filter(a=>a.ok).length;
+    const summary = `You scored ${state.score} / ${total} (${pct}%). Correct: ${correct} of ${state.order.length}. Time: ${time}s.`;
+    $('#summary').textContent = summary;
+    // breakdown chips
+    const types = ['mcq','tf','fill'];
+    const box = $('#breakdown'); box.innerHTML='';
+    types.forEach(t=>{
+      const totalT = state.order.filter(q=>q.type===t).length;
+      const okT = Object.values(state.answered).filter(a=>a.type===t && a.ok).length;
+      const chip = document.createElement('span'); chip.className='badge'; chip.textContent = `${t.toUpperCase()}: ${okT}/${totalT}`; box.appendChild(chip);
+    });
+    // review table
+    const tb = $('#review-table tbody'); tb.innerHTML='';
+    state.order.forEach((q, i)=>{
+      const a = state.answered[q.id] || {your:'—', ok:false, correct: q.type==='tf'? (q.ans? 'True':'False') : (q.type==='mcq'? q.opts[q.ans] : (q.ans[0]))};
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${q.type.toUpperCase()}</td><td>${q.q}</td><td>${a.your}</td><td>${a.correct}</td><td>${a.ok? '✅':'❌'}</td>`;
+      tb.appendChild(tr);
+    });
+    $('#result-card').style.display='block';
+  }
+
+  // Timer
+  setInterval(()=>{ const s = Math.round((Date.now()- (state.start||Date.now()))/1000); $('#timer').textContent = `Time: ${s}s`; }, 1000);
+
+  // Events
+  $('#btn-submit').addEventListener('click', checkAnswer);
+  $('#btn-next').addEventListener('click', ()=>{ state.idx = clamp(state.idx+1,0,state.order.length-1); render(); });
+  $('#btn-prev').addEventListener('click', goPrev);
+  $('#btn-skip').addEventListener('click', skip);
+  $('#autoToggle').addEventListener('change', (e)=>{ state.auto = e.target.checked; $('#auto-state').textContent = state.auto? 'On':'Off'; });
+  $('#btn-restart').addEventListener('click', ()=>{ $('#result-card').style.display='none'; $('#quiz-card').style.display='block'; init(); });
+  $('#btn-print').addEventListener('click', ()=>window.print());
+
+  // Teacher panel live edit
+  $('#btn-apply').addEventListener('click', ()=>{
+    try{
+      const arr = JSON.parse($('#editor').value);
+      if(!Array.isArray(arr)) throw new Error('JSON must be an array');
+      QUESTIONS.length = 0; arr.forEach(o=>QUESTIONS.push(o));
+      init();
+      alert('Applied! Questions reloaded.');
+    }catch(e){ alert('Invalid JSON: '+e.message); }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight') goNext();
+    if(e.key==='ArrowLeft') goPrev();
+    if(e.key.toLowerCase()==='s' && (e.ctrlKey||e.metaKey)){
+      e.preventDefault();
+      const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mother-teresa-quiz.html'; a.click();
+    }
+  });
+
+  // init
+  init();
+  </script>
+</body>
+</html>

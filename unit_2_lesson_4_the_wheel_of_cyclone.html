@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fullscreen MCQ Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+body { margin:0; padding:0; font-family: 'Orbitron', sans-serif; background: #0a0a0a; color:#0ff; overflow:hidden; }
+.start-screen, .quiz-container { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; }
+.start-button { font-size:10vw; padding:2vw 5vw; border-radius:2vw; cursor:pointer; background: linear-gradient(135deg,#0ff,#f0f); color:#000; border:none; text-shadow:0 0 0.5vw #0ff,0 0 1vw #f0f; transition:transform 0.3s; }
+.start-button:hover { transform: scale(1.05); }
+
+.progress-container { width:90%; display:flex; justify-content:space-between; align-items:center; margin-bottom:1vh; flex-shrink:0; }
+.progress-bar-container, .time-bar-container { width:85%; height:2vh; background:#222; border-radius:1vh; overflow:hidden; }
+.progress-bar, .time-bar { height:100%; width:0; background: linear-gradient(90deg,#0ff,#f0f); transition: width 0.3s linear; }
+.score-display { font-size:2vh; color:#0ff; text-shadow:0 0 0.3vh #0ff,0 0 0.6vh #f0f; margin-left:1vh; }
+
+.question { color:#0ff; text-align:center; margin-bottom:2vh; text-shadow:0 0 0.5vh #0ff,0 0 1vh #f0f; flex-shrink:0; word-wrap: break-word; width:90%; }
+
+.options { display:grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap:2vh; width:90%; height:55vh; }
+
+.option { display:flex; align-items:center; justify-content:center; text-align:center; cursor:pointer; background:#111; color:#fff; border:0.3vh solid #0ff; box-shadow:0 0 0.3vh #0ff,0 0 0.6vh #f0f; border-radius:1vh; word-wrap: break-word; transition:0.3s; font-size:6vw; }
+.option:hover { background:#0f0f0f; color:#0ff; transform:scale(1.03); }
+
+.control-buttons { margin-top:1vh; display:flex; gap:2vh; flex-shrink:0; }
+.control-buttons button { font-size:2.5vh; padding:1vh 2vh; border-radius:1vh; cursor:pointer; background: linear-gradient(135deg,#0ff,#f0f); color:#000; border:none; transition: transform 0.3s; }
+.control-buttons button:hover { transform: scale(1.05); }
+
+.feedback { position:fixed; top:50%; left:50%; transform: translate(-50%,-50%); font-weight:bold; display:none; font-size:8vw; }
+.feedback.correct { color:#00ff00; }
+.feedback.wrong { color:#ff0000; }
+
+#resultsContainer { display:none; width:90%; max-height:75vh; overflow-y:auto; text-align:center; margin-top:2vh; color:#0ff; }
+#resultsButtons { display:none; margin-top:1vh; gap:2vh; justify-content:center; }
+#resultsButtons button { font-size:3vh; padding:1vh 2vh; border-radius:1vh; }
+</style>
+</head>
+<body>
+<div class="start-screen">
+    <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+</div>
+
+<div class="quiz-container" style="display:none;">
+    <div class="progress-container">
+        <div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="score-display" id="liveScore">Question 0/0 - Score: 0</div>
+    </div>
+    <div class="time-bar-container"><div class="time-bar" id="timeBar"></div></div>
+    <div class="question" id="question"></div>
+    <div class="options">
+        <div class="option" id="opt0" onclick="selectOption(0)"></div>
+        <div class="option" id="opt1" onclick="selectOption(1)"></div>
+        <div class="option" id="opt2" onclick="selectOption(2)"></div>
+        <div class="option" id="opt3" onclick="selectOption(3)"></div>
+    </div>
+    <div class="control-buttons">
+        <button onclick="pauseTimer()">Pause</button>
+        <button onclick="resumeTimer()">Resume</button>
+        <button onclick="stopQuiz()">Stop</button>
+    </div>
+    <div id="resultsContainer"></div>
+    <div class="control-buttons" id="resultsButtons">
+        <button onclick="exportPDF()">Export Results (PDF)</button>
+        <button onclick="location.reload()">Retry Quiz</button>
+    </div>
+</div>
+
+<div class="feedback" id="feedback"></div>
+
+<script>
+const QUESTIONS = [
+  {
+    "q": "What was the weather typically like in North Delhi during mid-March?",
+    "options": ["Blazing hot with clear skies", "A bit chilly with occasional rain", "Mild with clear skies", "Cold and stormy"],
+    "answer": 2
+  },
+  {
+    "q": "What unexpected weather event occurred on March 17, 1978, in North Delhi?",
+    "options": ["A dust storm", "A hailstorm", "A heatwave", "A snowstorm"],
+    "answer": 1
+  },
+  {
+    "q": "What was the author doing when the hailstorm began?",
+    "options": ["Walking in the park", "Working as a journalist", "Studying in a library", "Visiting a friend"],
+    "answer": 2
+  },
+  {
+    "q": "How did the author's plans change due to the unseasonal weather?",
+    "options": ["He decided to stay late at the library.", "He decided to go straight home.", "He impulsively dropped in on a friend.", "He went to a tea stall."],
+    "answer": 2
+  },
+  {
+    "q": "What did the author first see forming on the underside of a dark cloud?",
+    "options": ["A large, swirling vortex", "A funnel-shaped cloud", "A gray, tube-like extrusion", "A bright flash of lightning"],
+    "answer": 2
+  },
+  {
+    "q": "Where did the author first try to take shelter from the approaching storm?",
+    "options": ["In a bus", "In a friend's room", "At a glass-fronted doorway", "Under a bridge"],
+    "answer": 2
+  },
+  {
+    "q": "What did the author see flying past while taking shelter on the balcony?",
+    "options": ["Cars, trees, and street signs", "Bicycles, scooters, and lampposts", "Buildings, furniture, and people", "Birds, leaves, and dust"],
+    "answer": 1
+  },
+  {
+    "q": "What happened to the glass-fronted doorway where the author first sought shelter?",
+    "options": ["The doors blew open.", "It was reduced to jagged debris.", "It remained untouched.", "The crowd inside was safe."],
+    "answer": 1
+  },
+  {
+    "q": "How did the author describe the sound of the storm at its peak?",
+    "options": ["A low hum", "An eerie silence", "A frenzied pitch", "A distant rumble"],
+    "answer": 2
+  },
+  {
+    "q": "What happened to the ceiling fans inside the exposed buildings after the storm?",
+    "options": ["They were bent into spirals.", "They were completely gone.", "They were twisted into tulip-like spirals.", "They were still spinning."],
+    "answer": 2
+  },
+  {
+    "q": "According to the Times of India headline, how many people were injured by the cyclone?",
+    "options": ["30", "700", "70", "300"],
+    "answer": 1
+  },
+  {
+    "q": "The author was a part-time journalist and was studying for his MA at:",
+    "options": ["Maurice Nagar University", "Delhi University", "North Delhi College", "The Times of India"],
+    "answer": 1
+  },
+  {
+    "q": "What did the author realize would have happened had he remained at the first shelter he found?",
+    "options": ["He would have been safe.", "He would have been unharmed.", "He would have been among the injured.", "He would have been rescued."],
+    "answer": 2
+  },
+  {
+    "q": "The author describes the scene of devastation as:",
+    "options": ["A minor inconvenience", "Something he had never before beheld", "A common occurrence", "A beautiful display of nature's power"],
+    "answer": 1
+  },
+  {
+    "q": "What was the final destination the author was heading to before the storm hit?",
+    "options": ["His friend's house", "His room", "The library", "The administrative building"],
+    "answer": 1
+  },
+  {
+    "q": "The word \"unseasonal\" in the text means:",
+    "options": ["Happening at the wrong time of year", "Very severe or harsh", "Mild and pleasant", "Predictable and expected"],
+    "answer": 0
+  },
+  {
+    "q": "The word \"impulse\" suggests that the author's decision to visit a friend was:",
+    "options": ["Pre-planned and deliberate", "Done without prior thought", "A result of being forced", "A bad idea"],
+    "answer": 1
+  },
+  {
+    "q": "What does \"whiplashing down to earth\" imply about the movement of the tube-like extrusion?",
+    "options": ["It was slow and gentle.", "It was a sudden, violent, and rapid motion.", "It was circular and swirling.", "It was a straight line downward."],
+    "answer": 1
+  },
+  {
+    "q": "The word \"panoply\" in the text refers to:",
+    "options": ["A confusing jumble of things", "A wide and varied assortment", "A small collection", "A single, unique object"],
+    "answer": 1
+  },
+  {
+    "q": "When the author says \"gravity itself seemed to have been transformed into a wheel spinning upon the fingertip of some unknown power,\" he is using a literary device to describe:",
+    "options": ["The unpredictable nature of gravity", "The incredible force and power of the cyclone", "The way the storm was shaped like a wheel", "The scientific explanation for the event"],
+    "answer": 1
+  },
+  {
+    "q": "What does the word \"confronted\" suggest about the author's encounter with the scene of devastation?",
+    "options": ["He was expecting it.", "It was a surprising and direct experience.", "He was happy to see it.", "He avoided it."],
+    "answer": 1
+  },
+  {
+    "q": "The word \"beheld\" means:",
+    "options": ["Described", "Imagined", "Hidden", "Seen or observed"],
+    "answer": 3
+  },
+  {
+    "q": "The phrase \"in a daze\" means the author felt:",
+    "options": ["Completely aware and focused", "Confused and stunned", "Tired and sleepy", "Relieved and happy"],
+    "answer": 1
+  },
+  {
+    "q": "What does the word \"extrusion\" suggest about the gray tube-like shape?",
+    "options": ["It was a solid, unchanging form.", "It was a liquid mass.", "It was being pushed out or forced out from something.", "It was floating."],
+    "answer": 2
+  },
+  {
+    "q": "The headline \"30 dead, 700 Hurt As Cyclone Hits North Delhi\" is an example of:",
+    "options": ["A scientific analysis", "An eyewitness account", "A summary of the event's consequences", "A personal diary entry"],
+    "answer": 2
+  },
+  {
+    "q": "What does the author's change of plans suggest about his character?",
+    "options": ["He is inflexible and rigid.", "He is cautious and prefers to stay indoors.", "He is intuitive and can adapt quickly.", "He is irresponsible and doesn't plan well."],
+    "answer": 2
+  },
+  {
+    "q": "The author's vivid description of the flying objects and the transformed ceiling fans suggests that the storm was:",
+    "options": ["A simple windstorm", "A mild rainstorm", "Extremely powerful and destructive", "A harmless natural phenomenon"],
+    "answer": 2
+  },
+  {
+    "q": "The author's repeated changes of direction and location during the storm (from the library, to a friend's house, to the balcony) show that he was:",
+    "options": ["Actively seeking the safest possible location.", "Aimlessly wandering.", "Trying to get a better view of the storm.", "Trying to find someone to help."],
+    "answer": 0
+  },
+  {
+    "q": "What is the central theme of this excerpt?",
+    "options": ["The importance of checking the weather forecast.", "The unpredictability and destructive power of nature.", "The daily life of a student in Delhi.", "The history of journalism in India."],
+    "answer": 1
+  },
+  {
+    "q": "The title \"The Wheel of Cyclone\" likely refers to:",
+    "options": ["The spinning motion of the cyclone.", "The overturned vehicles left behind by the storm.", "The author's feelings of being trapped.", "The scientific name for a cyclone."],
+    "answer": 0
+  },
+  {
+    "q": "The \"eerie silence\" that followed the noise of the storm suggests:",
+    "options": ["The complete absence of sound, indicating the end of the destructive force.", "That the storm was still active but had moved on.", "The author had gone deaf.", "People were screaming and yelling."],
+    "answer": 0
+  },
+  {
+    "q": "What is the main purpose of the first paragraph?",
+    "options": ["To introduce the main character.", "To describe the usual weather conditions and set up the contrast with the strange weather.", "To explain the science behind a hailstorm.", "To describe the library where the author was studying."],
+    "answer": 1
+  },
+  {
+    "q": "Why did the author feel he \"would have been among the injured\" if he had stayed at the glass-fronted doorway?",
+    "options": ["The door was locked, and he would have been exposed.", "The people there were fighting.", "The glass shattered, injuring the people who were huddled there.", "The overhang was too small to offer shelter."],
+    "answer": 2
+  },
+  {
+    "q": "The author's final act of looking up the Times of India's report shows his need to:",
+    "options": ["Verify his experience with an objective source.", "Find out the names of the victims.", "Write his own news article about the event.", "Understand the scientific reason for the cyclone."],
+    "answer": 0
+  },
+  {
+    "q": "The author's use of phrases like \"churning cloud of dust\" and \"tulip-like spirals\" helps to:",
+    "options": ["Make the text sound more scientific.", "Create vivid and memorable images of the storm's effects.", "Add suspense to the story.", "Describe the author's emotional state."],
+    "answer": 1
+  },
+  {
+    "q": "Based on the description, the weather phenomenon the author experienced was most likely a:",
+    "options": ["A hurricane", "A tornado", "A monsoon", "A simple windstorm"],
+    "answer": 1
+  },
+  {
+    "q": "The account is a good example of:",
+    "options": ["A third-person narrative", "A news report", "An anecdotal, first-person narrative", "A scientific journal entry"],
+    "answer": 2
+  },
+  {
+    "q": "The passage suggests that even in a highly populated urban area like North Delhi, natural disasters can:",
+    "options": ["Be easily predicted and prepared for.", "Have little to no effect.", "Strike with surprising speed and devastation.", "Only affect certain buildings."],
+    "answer": 2
+  },
+  {
+    "q": "The fact that the Times of India called it a \"Cyclone\" rather than a \"Tornado\" may suggest:",
+    "options": ["The term \"tornado\" was not in common use in India at the time.", "The storm was a different type of weather event.", "The newspaper made a mistake.", "The storm was a tropical storm."],
+    "answer": 0
+  },
+  {
+    "q": "The author's description of finding the newspaper photocopy years later shows that the event:",
+    "options": ["Was a forgettable experience.", "Was a moment of mild interest.", "Had a lasting and profound impact on him.", "Was part of a larger research project."],
+    "answer": 2
+  },
+  {
+    "q": "What is the primary purpose of Amitabh Ghosh's \"The Great Derangement,\" from which this excerpt is taken?",
+    "options": ["To discuss the impacts of climate change and humanity's response to it.", "To document historical weather events in India.", "To provide a guide for surviving natural disasters.", "To analyze the history of journalism."],
+    "answer": 0
+  },
+  {
+    "q": "How does the first paragraph contribute to the suspense of the story?",
+    "options": ["It reveals the full force of the storm.", "It describes a normal, pleasant day, making the sudden bad weather more shocking.", "It introduces the author as a journalist.", "It foreshadows that something bad will happen."],
+    "answer": 1
+  },
+  {
+    "q": "The author's use of the phrase \"whiplashing down to earth\" is an example of a:",
+    "options": ["Metaphor", "Simile", "Hyperbole", "Personification"],
+    "answer": 1
+  },
+  {
+    "q": "Which of the following best describes the overall tone of the excerpt?",
+    "options": ["Factual and detached", "Humorous and lighthearted", "Suspenseful and contemplative", "Pessimistic and depressing"],
+    "answer": 2
+  },
+  {
+    "q": "The event described in the passage can be seen as an example of:",
+    "options": ["A typical weather pattern in North Delhi", "A rare and unusual weather phenomenon", "A man-made disaster", "A mild summer storm"],
+    "answer": 1
+  },
+  {
+    "q": "What does the description of the overturned buses and perched scooters indicate about the storm?",
+    "options": ["Its immense lifting power.", "Its circular motion.", "Its effect on traffic.", "Its limited scope of destruction."],
+    "answer": 0
+  },
+  {
+    "q": "Why is the author's decision to drop in on a friend \"on an impulse\" a significant detail in the narrative?",
+    "options": ["It shows he was irresponsible.", "It was a moment of serendipity that potentially saved his life by taking him away from the initial dangerous location.", "It reveals that he had a close relationship with the friend.", "It was the reason he was caught in the storm in the first place."],
+    "answer": 1
+  },
+  {
+    "q": "The phrase \"The place where I had first thought to take shelter...had been reduced to a jumble of jagged debris\" serves to:",
+    "options": ["Show that the author made a bad decision.", "Emphasize the author's luck in changing his mind.", "Describe the path of the storm.", "Explain why the author was dazed."],
+    "answer": 1
+  },
+  {
+    "q": "What does the author's decision to lie \"still\" on the balcony suggest?",
+    "options": ["He was tired from running.", "He was trying to avoid being hit by debris.", "He was in shock and unable to move.", "He was trying to get a better view of the storm."],
+    "answer": 1
+  },
+  {
+    "q": "The story is structured around a series of:",
+    "options": ["Scientific explanations", "Characters' dialogue", "The author's choices and changes of direction in response to a threatening event", "Flashbacks to the author's childhood"],
+    "answer": 2
+  }
+];
+
+let current=0, score=0, answers=[], timer, timeLeft=30, isPaused=false;
+
+function startQuiz(){
+    document.querySelector('.start-screen').style.display='none';
+    document.querySelector('.quiz-container').style.display='flex';
+    document.documentElement.requestFullscreen();
+    updateLiveScore();
+    loadQuestion();
+}
+
+function adjustQuestionFont(){
+    const questionEl = document.getElementById('question');
+    let qSize = 5; 
+    questionEl.style.fontSize = qSize + 'vw';
+    questionEl.innerHTML = questionEl.innerText;
+    while(questionEl.scrollHeight < window.innerHeight * 0.25 && qSize < 12){
+        qSize += 0.5;
+        questionEl.style.fontSize = qSize + 'vw';
+    }
+    const maxCharsPerLine = 80;
+    let text = questionEl.innerText;
+    if(text.length > maxCharsPerLine){
+        let newText = '';
+        while(text.length > maxCharsPerLine){
+            newText += text.substr(0, maxCharsPerLine) + '\n';
+            text = text.substr(maxCharsPerLine);
+        }
+        newText += text;
+        questionEl.innerText = newText;
+    }
+}
+
+function loadQuestion(){
+    clearInterval(timer);
+    const q = QUESTIONS[current];
+    document.getElementById('question').innerText = q.q;
+    q.options.forEach((opt,i)=> document.getElementById('opt'+i).innerText = opt);
+    adjustQuestionFont();
+    updateProgressBar();
+    startTimer();
+    document.querySelector('.options').style.display='grid';
+    document.getElementById('question').style.display='block';
+}
+
+/* ========== UPDATED: only this function changed ========== */
+function selectOption(i){
+    const q = QUESTIONS[current]; 
+    // stop timer to avoid double-advancing
+    clearInterval(timer);
+    // Disable all options to prevent multiple clicks
+    for (let k = 0; k < q.options.length; k++) {
+        const el = document.getElementById('opt'+k);
+        if(el) el.style.pointerEvents = 'none';
+    }
+
+    const correctIndex = q.answer;
+
+    // Highlight correct option in neon green
+    const correctEl = document.getElementById('opt'+correctIndex);
+    if(correctEl){
+        correctEl.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
+        correctEl.style.boxShadow = '0 0 25px rgba(0, 255, 0, 1)';
+    }
+
+    // If the selected option is wrong, highlight it red; otherwise increment score
+    if (i !== correctIndex){
+        const wrongEl = document.getElementById('opt'+i);
+        if(wrongEl){
+            wrongEl.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+            wrongEl.style.boxShadow = '0 0 25px rgba(255, 0, 0, 1)';
+        }
+    } else {
+        score++;
+    }
+
+    // record answer
+    answers.push({question:q.q, selected:q.options[i], correct:q.options[q.answer]});
+    updateLiveScore();
+
+    // wait briefly so students can see feedback, then reset styles and go next
+    setTimeout(()=>{
+        for (let k = 0; k < q.options.length; k++) {
+            const el = document.getElementById('opt'+k);
+            if(el){
+                el.style.backgroundColor = '#111';
+                el.style.boxShadow = '0 0 0.3vh #0ff,0 0 0.6vh #f0f';
+                el.style.pointerEvents = 'auto';
+            }
+        }
+        nextQuestion();
+    }, 1000);
+}
+/* ========================================================= */
+
+function nextQuestion(){
+    clearInterval(timer);
+    current++;
+    timeLeft = 30;
+    if(current < QUESTIONS.length) loadQuestion();
+    else showResults();
+}
+
+function updateProgressBar(){ document.getElementById('progressBar').style.width=(current/QUESTIONS.length*100)+'%'; }
+function updateLiveScore(){ document.getElementById('liveScore').innerText = `Question ${current+1}/${QUESTIONS.length} - Score: ${score}`; }
+
+function startTimer(){
+    clearInterval(timer);
+    timeLeft=30; isPaused=false; document.getElementById('timeBar').style.width='100%';
+    timer=setInterval(()=>{
+        if(!isPaused){ timeLeft--; document.getElementById('timeBar').style.width=(timeLeft/30*100)+'%'; if(timeLeft<=0) nextQuestion(); }
+    },1000);
+}
+
+function pauseTimer(){ isPaused=true; }
+function resumeTimer(){ isPaused=false; }
+function stopQuiz(){ clearInterval(timer); showResults(); }
+
+function showResults(){
+    clearInterval(timer);
+    document.querySelector('.options').style.display='none';
+    document.getElementById('question').style.display='none';
+    const container = document.getElementById('resultsContainer');
+    let table='<h1 style="font-size:50px;">Your Score: '+score+'/'+QUESTIONS.length+'</h1>';
+    table+='<table border="1" style="width:100%;font-size:25px;text-align:center;color:#0ff;"><tr><th>Question</th><th>Your Answer</th><th>Correct Answer</th></tr>';
+    answers.forEach(a=>{
+        table+=`<tr style="color:${a.selected===a.correct?'#0f0':'#f00'}">
+        <td>${a.question}</td><td>${a.selected}</td><td>${a.correct}</td></tr>`;
+    });
+    table+='</table>';
+    container.innerHTML = table;
+    container.style.display='block';
+    document.getElementById('resultsButtons').style.display = 'flex';
+}
+
+function exportPDF(){
+    const { jsPDF }=window.jspdf; const doc=new jsPDF();
+    doc.setFontSize(18); doc.text('Kunda High School - Quiz Result',20,20);
+    doc.setFontSize(14); doc.text(`Date: ${new Date().toLocaleDateString()}`,20,30);
+    doc.text(`Score: ${score}/${QUESTIONS.length}`,20,40);
+    let y=50;
+    answers.forEach(a=>{ doc.text(`${a.question}`,20,y); y+=10; doc.text(`Your Answer: ${a.selected}`,30,y); y+=10; doc.text(`Correct Answer: ${a.correct}`,30,y); y+=15; });
+    doc.text('Teacher Signature: Sharif Uddin, Asst. Teacher',20,y+20);
+    doc.save('quiz_results.pdf');
+}
+</script>
+</body>
+</html>
